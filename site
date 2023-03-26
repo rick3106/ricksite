@@ -1,0 +1,61 @@
+from flask import Flask, render_template, request, redirect, url_for, session
+
+app = Flask(__name__)
+app.config['DEBUG'] = True
+app.secret_key = 'my-secret-key'
+
+users = {'admin': 'password'}  # username e password di esempio
+
+@app.route('/')
+def index():
+    if 'username' in session:
+        return redirect(url_for('home'))
+    return render_template('index.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm = request.form['confirm']
+        if password != confirm:
+            return render_template('register.html', error='Password mismatch')
+        if username in users:
+            return render_template('register.html', error='Username already exists')
+        users[username] = password
+        session['username'] = username
+        return redirect(url_for('home'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username not in users or users[username] != password:
+            return render_template('login.html', error='Invalid credentials')
+        session['username'] = username
+        return redirect(url_for('home'))
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('index'))
+
+@app.route('/home')
+def home():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template('home.html', username=session['username'])
+
+@app.errorhandler(404)
+def page_not_found(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    return render_template('500.html'), 500
+
+if __name__ == '__main__':
+    app.run()
